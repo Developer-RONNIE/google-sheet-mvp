@@ -13,7 +13,7 @@ const Spreadsheet = () => {
   const handleCellChange = (row: number, col: string, value: string) => {
     setCellData(prev => ({
       ...prev,
-      `${col}${row}`: value
+      [`${col}${row}`]: value
     }));
   };
 
