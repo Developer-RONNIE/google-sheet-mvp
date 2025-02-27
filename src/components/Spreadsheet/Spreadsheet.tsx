@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { User } from 'lucide-react';
+import { User, FileSpreadsheet } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import Toolbar from './Toolbar';
 import Grid from './Grid';
@@ -24,11 +24,9 @@ const Spreadsheet = () => {
       {/* Header with Logo and Auth */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 bg-white">
         <div className="flex items-center space-x-2">
-          <img 
-            src="/placeholder.svg" 
-            alt="Logo" 
-            className="h-8 w-8"
-          />
+          <div className="p-1 bg-green-600 rounded">
+            <FileSpreadsheet className="h-6 w-6 text-white" />
+          </div>
           <span className="font-semibold text-gray-700">Friendly Sheet</span>
         </div>
         
@@ -45,9 +43,9 @@ const Spreadsheet = () => {
             className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700"
           >
             <img 
-              src="/placeholder.svg" 
+              src="https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=32&h=32&fit=crop" 
               alt="Google" 
-              className="h-4 w-4"
+              className="h-4 w-4 rounded-full"
             />
             <span>Sign in with Google</span>
           </Button>
