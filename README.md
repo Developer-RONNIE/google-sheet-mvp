@@ -1,4 +1,4 @@
-# Welcome to your Lovable project
+# Google-Sheet-mvp
 
 ## Project info
 
