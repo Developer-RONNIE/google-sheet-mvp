@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { User, FileSpreadsheet, Edit2 } from 'lucide-react';
+import { User, FileSpreadsheet, Edit2, Info } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -8,6 +8,7 @@ import Toolbar from './Toolbar';
 import Grid from './Grid';
 import FormulaBar from './FormulaBar';
 import SheetTabs from './SheetTabs';
+import TutorialModal from './TutorialModal';
 
 interface CellFormat {
   bold?: boolean;
@@ -28,6 +29,7 @@ const Spreadsheet = () => {
   const [cellData, setCellData] = useState<{[key: string]: string}>({});
   const [fileName, setFileName] = useState("Untitled Spreadsheet");
   const [isEditingFileName, setIsEditingFileName] = useState(false);
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const isMobile = useIsMobile();
 
   const handleCellChange = (row: number, col: string, value: string) => {
@@ -104,6 +106,14 @@ const Spreadsheet = () => {
     setIsEditingFileName(false);
   };
 
+  const openTutorial = () => {
+    setIsTutorialOpen(true);
+  };
+
+  const closeTutorial = () => {
+    setIsTutorialOpen(false);
+  };
+
   return (
     <div className="h-screen flex flex-col bg-gray-50">
       {/* Header with Logo and Auth */}
@@ -137,6 +147,16 @@ const Spreadsheet = () => {
         </div>
         
         <div className="flex items-center space-x-2 w-full sm:w-auto justify-center sm:justify-end">
+          <Button
+            variant="outline"
+            size={isMobile ? "sm" : "default"}
+            className="flex items-center space-x-1"
+            onClick={openTutorial}
+          >
+            <Info className="h-4 w-4" />
+            <span className="ml-1">{isMobile ? "Help" : "Functions Tutorial"}</span>
+          </Button>
+          
           {isMobile ? (
             <div className="flex space-x-2">
               <Button 
@@ -201,6 +221,9 @@ const Spreadsheet = () => {
         />
       </div>
       <SheetTabs />
+
+      {/* Tutorial Modal */}
+      <TutorialModal isOpen={isTutorialOpen} onClose={closeTutorial} />
     </div>
   );
 };
