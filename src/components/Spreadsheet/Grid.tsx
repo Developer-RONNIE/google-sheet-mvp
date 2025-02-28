@@ -52,7 +52,6 @@ const Grid = ({ activeCell, setActiveCell, cellData, onCellChange, zoom }: GridP
     const rawData = cellData[cellKey] || '';
     
     // For simplicity, we'll parse any JSON-formatted string as potential formatting data
-    // In a real implementation, you'd have a more robust system
     if (rawData.startsWith('{') && rawData.endsWith('}')) {
       try {
         return JSON.parse(rawData);
@@ -64,17 +63,161 @@ const Grid = ({ activeCell, setActiveCell, cellData, onCellChange, zoom }: GridP
     return { value: rawData };
   };
 
+  // Get cell value for calculation
+  const getCellValue = (cellRef: string): number => {
+    // Extract column and row from cell reference (e.g., A1, B2)
+    const col = cellRef.charAt(0);
+    const row = parseInt(cellRef.substring(1));
+    
+    // Get cell data
+    const cellData = getEnhancedCellData(row, col);
+    const value = cellData.value || '0';
+    
+    // Try to convert to number
+    const numValue = parseFloat(value);
+    return isNaN(numValue) ? 0 : numValue;
+  };
+  
+  // Parse cell range (e.g., A1:B3)
+  const parseCellRange = (range: string): { startCol: string; startRow: number; endCol: string; endRow: number } => {
+    const [start, end] = range.split(':');
+    
+    const startCol = start.charAt(0);
+    const startRow = parseInt(start.substring(1));
+    const endCol = end.charAt(0);
+    const endRow = parseInt(end.substring(1));
+    
+    return { startCol, startRow, endCol, endRow };
+  };
+  
+  // Get all cells in a range
+  const getCellsInRange = (range: string): string[] => {
+    const { startCol, startRow, endCol, endRow } = parseCellRange(range);
+    
+    const startColIndex = columns.indexOf(startCol);
+    const endColIndex = columns.indexOf(endCol);
+    
+    const cells: string[] = [];
+    
+    for (let r = startRow; r <= endRow; r++) {
+      for (let c = startColIndex; c <= endColIndex; c++) {
+        cells.push(`${columns[c]}${r}`);
+      }
+    }
+    
+    return cells;
+  };
+
+  // Mathematical functions
+  const mathFunctions = {
+    SUM: (range: string): number => {
+      const cells = getCellsInRange(range);
+      return cells.reduce((sum, cell) => sum + getCellValue(cell), 0);
+    },
+    
+    AVERAGE: (range: string): number => {
+      const cells = getCellsInRange(range);
+      const sum = cells.reduce((acc, cell) => acc + getCellValue(cell), 0);
+      return sum / cells.length;
+    },
+    
+    MAX: (range: string): number => {
+      const cells = getCellsInRange(range);
+      return Math.max(...cells.map(cell => getCellValue(cell)));
+    },
+    
+    MIN: (range: string): number => {
+      const cells = getCellsInRange(range);
+      return Math.min(...cells.map(cell => getCellValue(cell)));
+    },
+    
+    COUNT: (range: string): number => {
+      const cells = getCellsInRange(range);
+      return cells.filter(cell => {
+        const value = getCellValue(cell);
+        return !isNaN(value);
+      }).length;
+    }
+  };
+
+  // Data quality functions
+  const dataQualityFunctions = {
+    TRIM: (text: string): string => {
+      return text.trim();
+    },
+    
+    UPPER: (text: string): string => {
+      return text.toUpperCase();
+    },
+    
+    LOWER: (text: string): string => {
+      return text.toLowerCase();
+    },
+    
+    REMOVE_DUPLICATES: (range: string): string => {
+      // In a real implementation, this would modify the actual data
+      // For now, we'll just return a message
+      return `Removing duplicates from ${range}`;
+    },
+    
+    FIND_AND_REPLACE: (range: string, find: string, replace: string): string => {
+      // In a real implementation, this would modify the actual data
+      // For now, we'll just return a message
+      return `Replacing ${find} with ${replace} in ${range}`;
+    }
+  };
+
   // Calculate cell dependencies and update formula results
   const calculateFormula = (formula: string) => {
-    // Simple formula parser for demo purposes
-    // In a real implementation, you'd use a more robust formula parser
     if (!formula) return '';
+    
+    // Check for mathematical functions
+    const mathFunctionPattern = /(SUM|AVERAGE|MAX|MIN|COUNT)\(([A-Z][0-9]+:[A-Z][0-9]+)\)/g;
+    let calculatedFormula = formula;
+    
+    // Process math functions
+    let mathMatch;
+    while ((mathMatch = mathFunctionPattern.exec(formula)) !== null) {
+      const [fullMatch, funcName, range] = mathMatch;
+      
+      if (mathFunctions[funcName as keyof typeof mathFunctions]) {
+        const result = mathFunctions[funcName as keyof typeof mathFunctions](range);
+        calculatedFormula = calculatedFormula.replace(fullMatch, result.toString());
+      }
+    }
+    
+    // Check for data quality functions
+    const trimPattern = /TRIM\(([^)]+)\)/g;
+    const upperPattern = /UPPER\(([^)]+)\)/g;
+    const lowerPattern = /LOWER\(([^)]+)\)/g;
+    
+    // Process TRIM
+    let trimMatch;
+    while ((trimMatch = trimPattern.exec(calculatedFormula)) !== null) {
+      const [fullMatch, text] = trimMatch;
+      const result = dataQualityFunctions.TRIM(text.replace(/"/g, ''));
+      calculatedFormula = calculatedFormula.replace(fullMatch, `"${result}"`);
+    }
+    
+    // Process UPPER
+    let upperMatch;
+    while ((upperMatch = upperPattern.exec(calculatedFormula)) !== null) {
+      const [fullMatch, text] = upperMatch;
+      const result = dataQualityFunctions.UPPER(text.replace(/"/g, ''));
+      calculatedFormula = calculatedFormula.replace(fullMatch, `"${result}"`);
+    }
+    
+    // Process LOWER
+    let lowerMatch;
+    while ((lowerMatch = lowerPattern.exec(calculatedFormula)) !== null) {
+      const [fullMatch, text] = lowerMatch;
+      const result = dataQualityFunctions.LOWER(text.replace(/"/g, ''));
+      calculatedFormula = calculatedFormula.replace(fullMatch, `"${result}"`);
+    }
     
     // Extract cell references (e.g., A1, B2)
     const cellRefPattern = /[A-Z][0-9]+/g;
-    const cellRefs = formula.match(cellRefPattern) || [];
-    
-    let calculatedFormula = formula;
+    const cellRefs = calculatedFormula.match(cellRefPattern) || [];
     
     // Replace cell references with their values
     cellRefs.forEach(cellRef => {
@@ -86,8 +229,14 @@ const Grid = ({ activeCell, setActiveCell, cellData, onCellChange, zoom }: GridP
     
     // Try to evaluate the formula if it's a valid expression
     try {
-      // eslint-disable-next-line no-eval
-      return eval(calculatedFormula);
+      if (calculatedFormula.includes('"')) {
+        // String result
+        return calculatedFormula.replace(/"/g, '');
+      } else {
+        // Numeric result
+        // eslint-disable-next-line no-eval
+        return eval(calculatedFormula);
+      }
     } catch (e) {
       return `#ERROR: ${e}`;
     }
