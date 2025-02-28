@@ -117,8 +117,9 @@ const Spreadsheet = () => {
   return (
     <div className="h-screen flex flex-col bg-gray-50">
       {/* Header with Logo and Auth */}
-      <div className="flex flex-col sm:flex-row items-center justify-between px-4 py-2 border-b border-gray-200 bg-white gap-2">
-        <div className="flex items-center space-x-2 w-full sm:w-auto justify-center sm:justify-start">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-4 py-2 border-b border-gray-200 bg-white gap-2">
+        {/* Logo and Filename - Always on the left, even on mobile */}
+        <div className="flex items-center space-x-2 w-full sm:w-auto justify-start">
           <div className="p-1 bg-green-600 rounded">
             <FileSpreadsheet className="h-6 w-6 text-white" />
           </div>
@@ -146,7 +147,8 @@ const Spreadsheet = () => {
           )}
         </div>
         
-        <div className="flex items-center space-x-2 w-full sm:w-auto justify-center sm:justify-end">
+        {/* Tutorial and Auth Buttons - Now shown on left in mobile, right in desktop */}
+        <div className="flex items-center space-x-2 w-full sm:w-auto justify-start sm:justify-end">
           <Button
             variant="outline"
             size={isMobile ? "sm" : "default"}

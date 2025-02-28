@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
-import { Play } from 'lucide-react';
+import { Play, Calculator } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface FormulaBarProps {
   activeCell: { row: number; col: string } | null;
@@ -13,7 +14,72 @@ interface FormulaBarProps {
 const FormulaBar = ({ activeCell, cellData, onCellChange }: FormulaBarProps) => {
   const [editValue, setEditValue] = useState('');
   const [testMode, setTestMode] = useState(false);
+  const [resultValue, setResultValue] = useState<string | number>('');
   const { toast } = useToast();
+  const isMobile = useIsMobile();
+  
+  // Calculate result from formula or get value
+  const calculateResult = (value: string) => {
+    if (!value.startsWith('=')) {
+      return value;
+    }
+    
+    try {
+      // Get formula part without the = sign
+      const formula = value.substring(1);
+      
+      // Process formula to get result
+      // This is a simplistic implementation; in a real app, you'd use a proper formula parser
+      let result = '';
+      
+      // Check for SUM function
+      const sumMatch = formula.match(/SUM\(([A-Z][0-9]+:[A-Z][0-9]+)\)/);
+      if (sumMatch) {
+        result = 'SUM result';
+      } 
+      // Check for AVERAGE function
+      else if (formula.match(/AVERAGE\(([A-Z][0-9]+:[A-Z][0-9]+)\)/)) {
+        result = 'AVERAGE result';
+      }
+      // Check for MAX function
+      else if (formula.match(/MAX\(([A-Z][0-9]+:[A-Z][0-9]+)\)/)) {
+        result = 'MAX result';
+      }
+      // Check for MIN function
+      else if (formula.match(/MIN\(([A-Z][0-9]+:[A-Z][0-9]+)\)/)) {
+        result = 'MIN result';
+      }
+      // Check for COUNT function
+      else if (formula.match(/COUNT\(([A-Z][0-9]+:[A-Z][0-9]+)\)/)) {
+        result = 'COUNT result';
+      }
+      // Check for TRIM function
+      else if (formula.match(/TRIM\("([^"]*)"\)/)) {
+        result = 'TRIM result';
+      }
+      // Check for UPPER function
+      else if (formula.match(/UPPER\("([^"]*)"\)/)) {
+        result = 'UPPER result';
+      }
+      // Check for LOWER function
+      else if (formula.match(/LOWER\("([^"]*)"\)/)) {
+        result = 'LOWER result';
+      }
+      // Simple math expression
+      else {
+        try {
+          // For simple math expressions, try to evaluate
+          result = eval(formula);
+        } catch (e) {
+          result = '#ERROR';
+        }
+      }
+      
+      return result;
+    } catch (e) {
+      return '#ERROR';
+    }
+  };
   
   useEffect(() => {
     if (activeCell) {
@@ -27,23 +93,30 @@ const FormulaBar = ({ activeCell, cellData, onCellChange }: FormulaBarProps) => 
           
           // If it's a formula, show it with the = prefix
           if (parsed.formula) {
-            setEditValue(`=${parsed.formula}`);
+            const formulaWithEq = `=${parsed.formula}`;
+            setEditValue(formulaWithEq);
+            setResultValue(calculateResult(formulaWithEq));
           } else {
             setEditValue(parsed.value || '');
+            setResultValue(parsed.value || '');
           }
         } catch (e) {
           setEditValue(rawData);
+          setResultValue(rawData);
         }
       } else {
         setEditValue(rawData);
+        setResultValue(rawData);
       }
     } else {
       setEditValue('');
+      setResultValue('');
     }
   }, [activeCell, cellData]);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEditValue(e.target.value);
+    setResultValue(calculateResult(e.target.value));
   };
   
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -100,10 +173,23 @@ const FormulaBar = ({ activeCell, cellData, onCellChange }: FormulaBarProps) => 
   };
   
   return (
-    <div className="border-b border-gray-200 p-2 flex items-center space-x-2 bg-white">
-      <div className="text-sm text-gray-500 w-20">
+    <div className="border-b border-gray-200 p-2 flex flex-wrap md:flex-nowrap items-center gap-2 bg-white">
+      <div className="text-sm text-gray-500 w-20 flex-shrink-0">
         {activeCell ? `${activeCell.col}${activeCell.row}` : ''}
       </div>
+      
+      {/* New Result Display Section */}
+      <div className="flex items-center bg-gray-50 rounded-md px-3 py-1 w-full md:w-auto md:min-w-[120px] md:max-w-[180px]">
+        <Calculator className="h-4 w-4 text-gray-400 mr-2" />
+        <div className="font-mono text-sm truncate">
+          {editValue.startsWith('=') ? (
+            <span className="text-blue-600">{resultValue}</span>
+          ) : (
+            <span className="text-gray-600">{resultValue}</span>
+          )}
+        </div>
+      </div>
+      
       <div className="relative flex-1">
         <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg">
           {editValue.startsWith('=') ? 'ƒx' : ''}
