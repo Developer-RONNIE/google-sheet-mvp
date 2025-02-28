@@ -9,6 +9,19 @@ import Grid from './Grid';
 import FormulaBar from './FormulaBar';
 import SheetTabs from './SheetTabs';
 
+interface CellFormat {
+  bold?: boolean;
+  italic?: boolean;
+  color?: string;
+  fontSize?: number;
+}
+
+type CellDataWithFormat = {
+  value: string;
+  format?: CellFormat;
+  formula?: string;
+};
+
 const Spreadsheet = () => {
   const [zoom, setZoom] = useState(100);
   const [activeCell, setActiveCell] = useState<{row: number; col: string} | null>(null);
@@ -18,9 +31,64 @@ const Spreadsheet = () => {
   const isMobile = useIsMobile();
 
   const handleCellChange = (row: number, col: string, value: string) => {
+    // Check if value is a formula
+    if (value.startsWith('=')) {
+      setCellData(prev => ({
+        ...prev,
+        [`${col}${row}`]: JSON.stringify({
+          value: '', // Will be calculated on display
+          formula: value.substring(1) // Remove the = sign
+        })
+      }));
+    } else {
+      // Regular value
+      setCellData(prev => ({
+        ...prev,
+        [`${col}${row}`]: value
+      }));
+    }
+    
+    // Update dependencies (in a real implementation, you'd track cell dependencies)
+    updateDependentCells(col, row);
+  };
+  
+  const updateDependentCells = (col: string, row: number) => {
+    // In a real implementation, this would update cells that depend on the changed cell
+    // For now, this is a placeholder
+    console.log(`Cell ${col}${row} updated, should update dependent cells`);
+  };
+
+  const handleFormatCell = (format: CellFormat) => {
+    if (!activeCell) return;
+    
+    const { col, row } = activeCell;
+    const cellKey = `${col}${row}`;
+    const currentData = cellData[cellKey] || '';
+    
+    // Try to parse existing data as JSON
+    let cellInfo: CellDataWithFormat;
+    
+    try {
+      cellInfo = currentData.startsWith('{') && currentData.endsWith('}') 
+        ? JSON.parse(currentData) 
+        : { value: currentData };
+    } catch (e) {
+      cellInfo = { value: currentData };
+    }
+    
+    // Apply new formatting
+    const newCellInfo = {
+      ...cellInfo,
+      format: {
+        ...cellInfo.format,
+        ...format
+      }
+    };
+    
+    // Update cell data
     setCellData(prev => ({
       ...prev,
-      [`${col}${row}`]: value
+      [cellKey]: JSON.stringify(newCellInfo)
     }));
   };
 
@@ -116,7 +184,12 @@ const Spreadsheet = () => {
         </div>
       </div>
 
-      <Toolbar zoom={zoom} setZoom={setZoom} />
+      <Toolbar 
+        zoom={zoom} 
+        setZoom={setZoom} 
+        activeCell={activeCell} 
+        onFormatCell={handleFormatCell} 
+      />
       <FormulaBar activeCell={activeCell} cellData={cellData} onCellChange={handleCellChange} />
       <div className="flex-1 overflow-auto">
         <Grid
