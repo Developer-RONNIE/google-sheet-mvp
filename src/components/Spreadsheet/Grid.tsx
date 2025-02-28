@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ArrowRight, ChevronDown, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useToast } from "@/hooks/use-toast";
 
 interface GridProps {
   activeCell: { row: number; col: string } | null;
@@ -22,6 +23,8 @@ type CellDataWithFormat = {
   value: string;
   format?: CellFormat;
   formula?: string;
+  dataType?: 'text' | 'number' | 'date' | 'auto';
+  validationError?: string;
 };
 
 type EnhancedCellData = {
@@ -43,10 +46,12 @@ const Grid = ({ activeCell, setActiveCell, cellData, onCellChange, zoom }: GridP
   const [startResizePosition, setStartResizePosition] = useState(0);
   const [startSize, setStartSize] = useState(0);
   const [selectedCells, setSelectedCells] = useState<{[key: string]: boolean}>({});
+  const [testResults, setTestResults] = useState<{[key: string]: any}>({});
   
+  const { toast } = useToast();
   const gridRef = useRef<HTMLDivElement>(null);
 
-  // Enhanced cell data with formatting
+  // Enhanced cell data with formatting and validation
   const getEnhancedCellData = (rowIndex: number, col: string): CellDataWithFormat => {
     const cellKey = `${col}${rowIndex}`;
     const rawData = cellData[cellKey] || '';
@@ -61,6 +66,64 @@ const Grid = ({ activeCell, setActiveCell, cellData, onCellChange, zoom }: GridP
     }
     
     return { value: rawData };
+  };
+
+  // Determine data type
+  const inferDataType = (value: string): 'text' | 'number' | 'date' | 'auto' => {
+    if (value === '') return 'auto';
+    
+    // Check if number
+    if (!isNaN(Number(value)) && value.trim() !== '') {
+      return 'number';
+    }
+    
+    // Check if date
+    const dateRegex = /^\d{1,2}[-/]\d{1,2}[-/]\d{4}$|^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/;
+    if (dateRegex.test(value)) {
+      return 'date';
+    }
+    
+    return 'text';
+  };
+
+  // Validate data based on expected type
+  const validateData = (value: string, expectedType?: 'text' | 'number' | 'date' | 'auto'): string | null => {
+    if (!expectedType || expectedType === 'auto') {
+      return null; // No validation error
+    }
+    
+    const inferredType = inferDataType(value);
+    
+    if (expectedType === 'number' && inferredType !== 'number') {
+      return 'Value must be a number';
+    }
+    
+    if (expectedType === 'date' && inferredType !== 'date') {
+      return 'Value must be a valid date (MM/DD/YYYY or YYYY/MM/DD)';
+    }
+    
+    return null; // No validation error
+  };
+
+  // Validate before saving cell data
+  const validateCellChange = (row: number, col: string, value: string): boolean => {
+    const cellKey = `${col}${row}`;
+    const cellInfo = getEnhancedCellData(row, col);
+    
+    if (cellInfo.dataType && cellInfo.dataType !== 'auto') {
+      const error = validateData(value, cellInfo.dataType);
+      
+      if (error) {
+        toast({
+          title: "Validation Error",
+          description: `${cellKey}: ${error}`,
+          variant: "destructive"
+        });
+        return false;
+      }
+    }
+    
+    return true;
   };
 
   // Get cell value for calculation
@@ -183,6 +246,12 @@ const Grid = ({ activeCell, setActiveCell, cellData, onCellChange, zoom }: GridP
       if (mathFunctions[funcName as keyof typeof mathFunctions]) {
         const result = mathFunctions[funcName as keyof typeof mathFunctions](range);
         calculatedFormula = calculatedFormula.replace(fullMatch, result.toString());
+        
+        // Store test result
+        setTestResults(prev => ({
+          ...prev,
+          [fullMatch]: result
+        }));
       }
     }
     
@@ -197,6 +266,12 @@ const Grid = ({ activeCell, setActiveCell, cellData, onCellChange, zoom }: GridP
       const [fullMatch, text] = trimMatch;
       const result = dataQualityFunctions.TRIM(text.replace(/"/g, ''));
       calculatedFormula = calculatedFormula.replace(fullMatch, `"${result}"`);
+      
+      // Store test result
+      setTestResults(prev => ({
+        ...prev,
+        [fullMatch]: result
+      }));
     }
     
     // Process UPPER
@@ -205,6 +280,12 @@ const Grid = ({ activeCell, setActiveCell, cellData, onCellChange, zoom }: GridP
       const [fullMatch, text] = upperMatch;
       const result = dataQualityFunctions.UPPER(text.replace(/"/g, ''));
       calculatedFormula = calculatedFormula.replace(fullMatch, `"${result}"`);
+      
+      // Store test result
+      setTestResults(prev => ({
+        ...prev,
+        [fullMatch]: result
+      }));
     }
     
     // Process LOWER
@@ -213,6 +294,12 @@ const Grid = ({ activeCell, setActiveCell, cellData, onCellChange, zoom }: GridP
       const [fullMatch, text] = lowerMatch;
       const result = dataQualityFunctions.LOWER(text.replace(/"/g, ''));
       calculatedFormula = calculatedFormula.replace(fullMatch, `"${result}"`);
+      
+      // Store test result
+      setTestResults(prev => ({
+        ...prev,
+        [fullMatch]: result
+      }));
     }
     
     // Extract cell references (e.g., A1, B2)
@@ -281,6 +368,31 @@ const Grid = ({ activeCell, setActiveCell, cellData, onCellChange, zoom }: GridP
 
   const handleMouseUp = () => {
     setDragging(false);
+  };
+
+  // Handle cell input change with validation
+  const handleCellChange = (row: number, col: string, value: string) => {
+    // Perform validation if needed
+    if (validateCellChange(row, col, value)) {
+      // Update the cell data
+      onCellChange(row, col, value);
+      
+      // Auto-detect and update data type
+      const dataType = inferDataType(value);
+      const cellKey = `${col}${row}`;
+      const cellInfo = getEnhancedCellData(row, col);
+      
+      // Only update type if it's currently auto or not set
+      if (!cellInfo.dataType || cellInfo.dataType === 'auto') {
+        const updatedCellInfo = {
+          ...cellInfo,
+          value,
+          dataType
+        };
+        
+        onCellChange(row, col, JSON.stringify(updatedCellInfo));
+      }
+    }
   };
 
   // Row and column resizing
@@ -379,6 +491,46 @@ const Grid = ({ activeCell, setActiveCell, cellData, onCellChange, zoom }: GridP
     // This would need to be handled in the parent component
   };
 
+  // Set data type for a cell
+  const setCellDataType = (row: number, col: string, dataType: 'text' | 'number' | 'date' | 'auto') => {
+    const cellKey = `${col}${row}`;
+    const cellInfo = getEnhancedCellData(row, col);
+    
+    const updatedCellInfo = {
+      ...cellInfo,
+      dataType
+    };
+    
+    onCellChange(row, col, JSON.stringify(updatedCellInfo));
+    
+    toast({
+      title: "Data Type Set",
+      description: `Cell ${cellKey} is now type: ${dataType}`,
+    });
+  };
+
+  // Test formula on sample data
+  const testFormula = (formula: string) => {
+    try {
+      const result = calculateFormula(formula);
+      
+      toast({
+        title: "Formula Test Result",
+        description: `${formula} = ${result}`,
+      });
+      
+      return result;
+    } catch (error) {
+      toast({
+        title: "Formula Error",
+        description: `Error in formula: ${error}`,
+        variant: "destructive"
+      });
+      
+      return `#ERROR: ${error}`;
+    }
+  };
+
   // Effect for global mouse events
   useEffect(() => {
     window.addEventListener('mousemove', handleMouseMoveGlobal);
@@ -389,6 +541,33 @@ const Grid = ({ activeCell, setActiveCell, cellData, onCellChange, zoom }: GridP
       window.removeEventListener('mouseup', handleMouseUpGlobal);
     };
   }, [isDraggingRowDivider, isDraggingColDivider, resizingRow, resizingCol, startResizePosition, startSize]);
+
+  // Get the CSS class for cell based on data type
+  const getCellTypeClass = (row: number, col: string): string => {
+    const cellInfo = getEnhancedCellData(row, col);
+    
+    switch (cellInfo.dataType) {
+      case 'number':
+        return 'bg-blue-50';
+      case 'date':
+        return 'bg-green-50';
+      case 'text':
+        return '';
+      default:
+        // Auto-detect based on content
+        const value = cellInfo.value || '';
+        const inferredType = inferDataType(value);
+        
+        switch (inferredType) {
+          case 'number':
+            return 'bg-blue-50 bg-opacity-30';
+          case 'date':
+            return 'bg-green-50 bg-opacity-30';
+          default:
+            return '';
+        }
+    }
+  };
 
   return (
     <div className="relative overflow-auto" style={{ fontSize: `${zoom/100}rem` }} ref={gridRef}>
@@ -445,13 +624,16 @@ const Grid = ({ activeCell, setActiveCell, cellData, onCellChange, zoom }: GridP
             const displayValue = cellInfo.formula 
               ? calculateFormula(cellInfo.formula) 
               : cellInfo.value;
+            const typeClass = getCellTypeClass(row, col);
             
             return (
               <div
                 key={`${col}${row}`}
                 className={cn(
                   "border-r border-b border-grid-border relative",
-                  isSelected && "bg-blue-50"
+                  isSelected && "bg-blue-100",
+                  typeClass,
+                  cellInfo.validationError && "border-red-500 border-2"
                 )}
                 style={{ 
                   width: colWidths[col] || 128, 
@@ -460,10 +642,27 @@ const Grid = ({ activeCell, setActiveCell, cellData, onCellChange, zoom }: GridP
                 onMouseDown={(e) => handleMouseDown(row, col, e)}
                 onMouseMove={() => handleMouseMove(row, col)}
                 onMouseUp={handleMouseUp}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  const menu = document.createElement('div');
+                  menu.className = 'context-menu';
+                  menu.innerHTML = `
+                    <div class='set-type'>
+                      <div onclick="setType('${row}', '${col}', 'text')">Set as Text</div>
+                      <div onclick="setType('${row}', '${col}', 'number')">Set as Number</div>
+                      <div onclick="setType('${row}', '${col}', 'date')">Set as Date</div>
+                      <div onclick="setType('${row}', '${col}', 'auto')">Auto-detect</div>
+                    </div>
+                  `;
+                  // Custom context menu would be implemented here in a real app
+                }}
               >
                 <input
                   type="text"
-                  className="cell-input absolute inset-0 w-full h-full"
+                  className={cn(
+                    "cell-input absolute inset-0 w-full h-full",
+                    cellInfo.validationError && "border-red-500"
+                  )}
                   style={{
                     fontWeight: cellInfo.format?.bold ? 'bold' : 'normal',
                     fontStyle: cellInfo.format?.italic ? 'italic' : 'normal',
@@ -471,9 +670,15 @@ const Grid = ({ activeCell, setActiveCell, cellData, onCellChange, zoom }: GridP
                     fontSize: cellInfo.format?.fontSize ? `${cellInfo.format.fontSize}px` : 'inherit',
                   }}
                   value={displayValue || ''}
-                  onChange={(e) => onCellChange(row, col, e.target.value)}
+                  onChange={(e) => handleCellChange(row, col, e.target.value)}
                   onFocus={() => setActiveCell({ row, col })}
+                  title={cellInfo.dataType ? `Type: ${cellInfo.dataType}` : ''}
                 />
+                {cellInfo.validationError && (
+                  <div className="absolute top-0 right-0 bg-red-500 text-white text-xs p-1">
+                    !
+                  </div>
+                )}
               </div>
             );
           })}

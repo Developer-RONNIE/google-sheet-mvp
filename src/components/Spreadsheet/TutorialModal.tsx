@@ -28,10 +28,12 @@ const TutorialModal = ({ isOpen, onClose }: TutorialModalProps) => {
         </DialogHeader>
         
         <Tabs defaultValue="intro" className="w-full mt-4">
-          <TabsList className="grid grid-cols-3">
+          <TabsList className="grid grid-cols-5">
             <TabsTrigger value="intro">Introduction</TabsTrigger>
-            <TabsTrigger value="math">Mathematical Functions</TabsTrigger>
-            <TabsTrigger value="data">Data Quality Functions</TabsTrigger>
+            <TabsTrigger value="math">Math Functions</TabsTrigger>
+            <TabsTrigger value="data">Data Quality</TabsTrigger>
+            <TabsTrigger value="types">Data Types</TabsTrigger>
+            <TabsTrigger value="testing">Testing</TabsTrigger>
           </TabsList>
           
           <TabsContent value="intro" className="space-y-4 pt-4">
@@ -171,6 +173,121 @@ const TutorialModal = ({ isOpen, onClose }: TutorialModalProps) => {
                 <li>TRIM, UPPER, and LOWER functions work with text values</li>
                 <li>REMOVE_DUPLICATES compares entire rows for duplicates</li>
                 <li>FIND_AND_REPLACE is case-sensitive by default</li>
+              </ul>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="types" className="space-y-4 pt-4">
+            <h3 className="text-lg font-medium">Data Types & Validation</h3>
+            
+            <p className="mt-2">The spreadsheet supports different data types and provides validation to ensure data integrity:</p>
+            
+            <div className="overflow-x-auto mt-4">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data Type</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Visual Indicator</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Example</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  <tr>
+                    <td className="px-6 py-4 whitespace-nowrap font-medium">Number</td>
+                    <td className="px-6 py-4">Numerical values only</td>
+                    <td className="px-6 py-4">
+                      <div className="w-full h-6 bg-blue-50 rounded"></div>
+                    </td>
+                    <td className="px-6 py-4">42, 3.14, -5</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 whitespace-nowrap font-medium">Text</td>
+                    <td className="px-6 py-4">Any text value</td>
+                    <td className="px-6 py-4">
+                      <div className="w-full h-6 bg-white rounded border border-gray-200"></div>
+                    </td>
+                    <td className="px-6 py-4">"Hello", "Product Name"</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 whitespace-nowrap font-medium">Date</td>
+                    <td className="px-6 py-4">Date values</td>
+                    <td className="px-6 py-4">
+                      <div className="w-full h-6 bg-green-50 rounded"></div>
+                    </td>
+                    <td className="px-6 py-4">01/15/2023, 2023/12/31</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 whitespace-nowrap font-medium">Auto (default)</td>
+                    <td className="px-6 py-4">Auto-detects the type based on content</td>
+                    <td className="px-6 py-4">
+                      <div className="w-full h-6 bg-gray-50 rounded"></div>
+                    </td>
+                    <td className="px-6 py-4">Varies based on content</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <h3 className="text-lg font-medium mt-6">Setting Data Types</h3>
+            <p>You can set the expected data type for a cell to enable validation:</p>
+            <ol className="list-decimal pl-5 space-y-2 mt-2">
+              <li>Right-click on a cell</li>
+              <li>Select "Set Data Type" from the context menu</li>
+              <li>Choose the appropriate type (Number, Text, Date, or Auto)</li>
+            </ol>
+            
+            <div className="bg-red-50 p-4 rounded-md mt-6">
+              <p className="font-medium">Data Validation</p>
+              <p className="mt-2">When a cell has a specific data type set, the spreadsheet will validate input against that type:</p>
+              <ul className="list-disc pl-5 mt-2 space-y-1">
+                <li>Number cells only accept numerical values</li>
+                <li>Date cells require valid date formats (MM/DD/YYYY or YYYY/MM/DD)</li>
+                <li>If validation fails, a red border will highlight the cell</li>
+                <li>A toast notification will explain the validation error</li>
+              </ul>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="testing" className="space-y-4 pt-4">
+            <h3 className="text-lg font-medium">Testing Formulas</h3>
+            
+            <p className="mt-2">You can test your formulas and functions with sample data:</p>
+            
+            <h4 className="font-medium mt-4">Testing Mathematical Functions</h4>
+            <ol className="list-decimal pl-5 space-y-2 mt-2">
+              <li>Enter values in a range of cells (e.g., A1 through A5)</li>
+              <li>In another cell, enter a formula using that range (e.g., <code className="bg-gray-100 px-1 rounded">=SUM(A1:A5)</code>)</li>
+              <li>The result will be calculated and displayed immediately</li>
+              <li>Update values in the source range to see the formula result update</li>
+            </ol>
+            
+            <div className="bg-blue-50 p-4 rounded-md mt-6">
+              <p className="font-medium">Example: Testing SUM function</p>
+              <ol className="list-decimal pl-5 mt-2 space-y-1">
+                <li>Enter 10 in cell A1</li>
+                <li>Enter 20 in cell A2</li>
+                <li>Enter 30 in cell A3</li>
+                <li>In cell A4, enter <code className="bg-gray-100 px-1 rounded">=SUM(A1:A3)</code></li>
+                <li>Cell A4 should display 60</li>
+                <li>Change A1 to 15, and A4 should update to 65</li>
+              </ol>
+            </div>
+            
+            <h4 className="font-medium mt-6">Testing Data Quality Functions</h4>
+            <ol className="list-decimal pl-5 space-y-2 mt-2">
+              <li>Enter sample text data in a cell (e.g., "  Sample Text  " in A1)</li>
+              <li>In another cell, apply a data quality function (e.g., <code className="bg-gray-100 px-1 rounded">=TRIM(A1)</code> in B1)</li>
+              <li>The result will show the transformed text</li>
+            </ol>
+            
+            <div className="bg-yellow-50 p-4 rounded-md mt-6">
+              <p className="font-medium">Testing Tips:</p>
+              <ul className="list-disc pl-5 mt-2 space-y-1">
+                <li>Function results update automatically when source data changes</li>
+                <li>Error messages will appear if a formula is invalid</li>
+                <li>You can use multiple functions in a single formula</li>
+                <li>To test complex formulas, build them step by step</li>
               </ul>
             </div>
           </TabsContent>
